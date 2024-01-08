@@ -67,6 +67,8 @@ function bundleRepository(repository) {
   const bundleName = `${full_name.split("/")[1]}-${latestDate}.bundle`;
 
   mkdirSync(bundlePath, { recursive: true });
+  log(chalk.yellow(`bundle path ${bundlePath}`));
+  log(chalk.yellow(`cloning ${cloneRepoPath}`));
   fs.rmSync(cloneRepoPath, { recursive: true, force: true });
 
   const existingBundles = getExistingBundles(bundlePath);
@@ -82,8 +84,14 @@ function bundleRepository(repository) {
   mkdirSync(cloneRepoPath, { recursive: true });
 
   try {
+	const clone_url_with_pat = clone_url.replace("github.com",`${process.env.GITHUB_TOKEN}@github.com`);
     log(chalk.blue(`⬇️  Cloning ${full_name} ➡️  ${cloneRepoPath}`));
-    const url = process.env.USE_SSH_URL === "true" ? ssh_url : clone_url;
+    log(chalk.yellow(`⬇️  ssh_url ${ssh_url}`));
+    log(chalk.yellow(`⬇️  clone_url ${clone_url}`));
+    log(chalk.yellow(`⬇️  clone_url_with_pat ${clone_url_with_pat}`));
+
+    const url = process.env.USE_SSH_URL === "true" ? ssh_url : clone_url_with_pat;
+	log(chalk.yellow(`cloning foo ${url}`));
     execSync(`git clone --mirror ${url} .`, {
       cwd: cloneRepoPath,
       stdio: "pipe",
@@ -109,12 +117,13 @@ function bundleRepository(repository) {
 
 function processRepositories(repositories) {
   for (const repository of repositories) {
+    if(repository.clone_url.includes("github-backup")) return;
     bundleRepository(repository);
   }
 }
 
-const result = await octokit.paginate(`GET /user/repos`, {
-  type: "owner",
+const result = await octokit.paginate(`GET /orgs/Inteladata/repos`, {
+  type: "all",
   per_page: 50,
 });
 processRepositories(result);
